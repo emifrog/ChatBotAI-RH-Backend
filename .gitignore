@@ -1,0 +1,56 @@
+# Dépendances
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Variables d'environnement
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+
+# Uploads
+uploads/
+temp/
+
+# Base de données
+*.db
+*.sqlite
+
+# Cache
+.cache/
+.parcel-cache/
+
+# Build
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma
+# Garder les migrations mais pas les fichiers générés
+# migrations/ - à garder
+prisma/generated/
+
+# Tests
+coverage/
+.nyc_output/
+
+# Temporary
+tmp/
+.tmp/

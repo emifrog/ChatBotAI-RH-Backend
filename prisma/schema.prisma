@@ -1,0 +1,420 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+// Modèles Utilisateurs et Authentification
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  name        String
+  firstName   String?
+  lastName    String?
+  department  String?
+  role        String?
+  manager     String?
+  hireDate    DateTime?
+  antibiaId   String?  @unique
+  isActive    Boolean  @default(true)
+  lastLogin   DateTime?
+  avatar      String?
+  phone       String?
+  address     String?
+  birthDate   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  conversations    Conversation[]
+  messages         Message[]
+  sessions         UserSession[]
+  intents          IntentLog[]
+  feedbacks        Feedback[]
+  leaveRequests    LeaveRequest[]
+  payslips         Payslip[]
+  trainings        UserTraining[]
+  notifications    Notification[]
+
+  @@map("users")
+}
+
+model UserSession {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  refreshToken String @unique
+  expiresAt DateTime
+  isActive  Boolean  @default(true)
+  userAgent String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_sessions")
+}
+
+// Modèles Conversations et Messages
+
+model Conversation {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String?
+  status      ConversationStatus @default(ACTIVE)
+  metadata    Json?
+  tags        String[]
+  priority    Int      @default(0)
+  startedAt   DateTime @default(now())
+  endedAt     DateTime?
+  lastActivityAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([userId, status])
+  @@index([lastActivityAt])
+  @@map("conversations")
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  conversationId String
+  userId         String?
+  type           MessageType
+  content        String
+  intent         String?
+  confidence     Float?
+  entities       Json?
+  antibiaData    Json?
+  actions        Json?
+  metadata       Json?
+  isEdited       Boolean     @default(false)
+  editedAt       DateTime?
+  parentId       String?     // Pour les réponses
+  timestamp      DateTime    @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  feedbacks    Feedback[]
+  parent       Message?     @relation("MessageReplies", fields: [parentId], references: [id])
+  replies      Message[]    @relation("MessageReplies")
+
+  @@index([conversationId, timestamp])
+  @@index([intent])
+  @@map("messages")
+}
+
+// Modèles RH - Congés
+
+model LeaveRequest {
+  id          String      @id @default(cuid())
+  userId      String
+  type        LeaveType
+  startDate   DateTime
+  endDate     DateTime
+  days        Float
+  reason      String?
+  status      RequestStatus @default(PENDING)
+  comments    String?
+  approvedBy  String?
+  approvedAt  DateTime?
+  rejectedBy  String?
+  rejectedAt  DateTime?
+  cancelledAt DateTime?
+  attachments String[]
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([startDate, endDate])
+  @@map("leave_requests")
+}
+
+model LeaveBalance {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  paidLeave   Float    @default(0)
+  rtt         Float    @default(0)
+  sickLeave   Float    @default(0)
+  special     Float    @default(0)
+  carried     Float    @default(0)
+  year        Int
+  lastUpdate  DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, year])
+  @@map("leave_balances")
+}
+
+// Modèles RH - Paie
+
+model Payslip {
+  id          String   @id @default(cuid())
+  userId      String
+  period      String   // "2024-01", "2024-02", etc.
+  year        Int
+  month       Int
+  grossSalary Float
+  netSalary   Float
+  taxes       Float
+  benefits    Json?    // Détails des avantages
+  deductions  Json?    // Détails des déductions
+  overtime    Float?
+  bonus       Float?
+  filePath    String?  // Chemin vers le PDF
+  metadata    Json?
+  isGenerated Boolean  @default(false)
+  generatedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, period])
+  @@index([userId, year, month])
+  @@map("payslips")
+}
+
+// Modèles RH - Formations
+
+model Training {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  category    String
+  duration    String
+  difficulty  TrainingDifficulty
+  maxSpots    Int
+  availableSpots Int
+  instructor  String?
+  location    String?
+  isOnline    Boolean  @default(false)
+  price       Float?
+  tags        String[]
+  requirements String[]
+  objectives  String[]
+  materials   Json?
+  startDate   DateTime?
+  endDate     DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userTrainings UserTraining[]
+
+  @@index([category, isActive])
+  @@index([difficulty])
+  @@map("trainings")
+}
+
+model UserTraining {
+  id            String          @id @default(cuid())
+  userId        String
+  trainingId    String
+  status        TrainingStatus  @default(ENROLLED)
+  progress      Int             @default(0)
+  score         Float?
+  feedback      String?
+  completedAt   DateTime?
+  certificateUrl String?
+  enrolledAt    DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  training Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trainingId])
+  @@index([userId, status])
+  @@map("user_trainings")
+}
+
+// Modèles Analytics et Logs
+
+model IntentLog {
+  id            String   @id @default(cuid())
+  userId        String
+  messageId     String?
+  userMessage   String
+  detectedIntent String
+  confidence    Float
+  entities      Json?
+  processingTime Int
+  nlpProvider   String
+  success       Boolean  @default(true)
+  errorMessage  String?
+  timestamp     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, detectedIntent])
+  @@index([timestamp])
+  @@map("intent_logs")
+}
+
+model Feedback {
+  id        String      @id @default(cuid())
+  messageId String
+  userId    String
+  type      FeedbackType
+  rating    Int?
+  comment   String?
+  metadata  Json?
+  createdAt DateTime    @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([userId, type])
+  @@map("feedbacks")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  expiresAt DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// Modèles Cache et Performance
+
+model CacheEntry {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  ttl       DateTime
+  tags      String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ttl])
+  @@index([tags])
+  @@map("cache_entries")
+}
+
+model ApiCall {
+  id           String   @id @default(cuid())
+  userId       String?
+  endpoint     String
+  method       String
+  statusCode   Int
+  duration     Int
+  requestSize  Int?
+  responseSize Int?
+  userAgent    String?
+  ipAddress    String?
+  errorMessage String?
+  timestamp    DateTime @default(now())
+
+  @@index([endpoint, method])
+  @@index([timestamp])
+  @@index([statusCode])
+  @@map("api_calls")
+}
+
+// Modèles Analytics
+
+model DailyStats {
+  id              String   @id @default(cuid())
+  date            DateTime @unique @db.Date
+  totalUsers      Int      @default(0)
+  activeUsers     Int      @default(0)
+  totalMessages   Int      @default(0)
+  botMessages     Int      @default(0)
+  avgResponseTime Float?
+  avgSessionTime  Float?
+  topIntents      Json?
+  errorRate       Float?
+  satisfactionRate Float?
+  
+  @@index([date])
+  @@map("daily_stats")
+}
+
+// Énumérations
+
+enum ConversationStatus {
+  ACTIVE
+  ENDED
+  ARCHIVED
+  ESCALATED
+}
+
+enum MessageType {
+  USER
+  BOT
+  SYSTEM
+  ACTION
+}
+
+enum LeaveType {
+  PAID
+  RTT
+  SICK
+  MATERNITY
+  PATERNITY
+  SPECIAL
+  UNPAID
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum TrainingDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum TrainingStatus {
+  ENROLLED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+enum FeedbackType {
+  THUMBS_UP
+  THUMBS_DOWN
+  RATING
+  COMMENT
+  BUG_REPORT
+}
+
+enum NotificationType {
+  LEAVE_APPROVED
+  LEAVE_REJECTED
+  PAYSLIP_AVAILABLE
+  TRAINING_REMINDER
+  SYSTEM_UPDATE
+  GENERAL
+}
