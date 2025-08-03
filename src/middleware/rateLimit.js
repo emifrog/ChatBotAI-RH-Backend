@@ -16,7 +16,7 @@ const globalLimiter = rateLimit({
 // Rate limiting pour l'authentification
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 tentatives de connexion par IP
+  max: process.env.NODE_ENV === 'development' ? 50 : 5, // 50 en dev, 5 en prod
   message: {
     success: false,
     message: 'Trop de tentatives de connexion, veuillez réessayer dans 15 minutes.'

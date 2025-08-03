@@ -57,7 +57,9 @@ const createApp = () => {
   }));
 
   // Rate limiting
-  app.use('/api/', globalLimiter);
+  if (process.env.NODE_ENV !== 'development') {
+    app.use('/api/', globalLimiter);
+  }
 
   // Trust proxy (important pour Nginx, Heroku, etc.)
   app.set('trust proxy', 1);
