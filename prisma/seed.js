@@ -1,215 +1,119 @@
+// Script de seed simplifié pour données de démonstration
+
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding de la base de données...');
+  console.log('🌱 Seeding database...');
 
-  // Créer des utilisateurs d'exemple
-  const users = [
-    {
-      email: 'marie.dubois@company.com',
-      password: await bcrypt.hash('password123', 12),
-      name: 'Marie Dubois',
-      firstName: 'Marie',
-      lastName: 'Dubois',
-      department: 'Développement',
-      role: 'Développeur Senior',
-      manager: 'Jean Martin',
-      hireDate: new Date('2020-03-15'),
-      phone: '06.12.34.56.78',
-      isActive: true
-    },
-    {
-      email: 'pierre.martin@company.com',
-      password: await bcrypt.hash('password123', 12),
-      name: 'Pierre Martin',
-      firstName: 'Pierre',
-      lastName: 'Martin',
-      department: 'RH',
-      role: 'Responsable RH',
-      hireDate: new Date('2018-01-10'),
-      phone: '06.98.76.54.32',
-      isActive: true
-    },
-    {
-      email: 'admin@company.com',
-      password: await bcrypt.hash('admin123', 12),
-      name: 'Administrateur',
-      firstName: 'Admin',
-      lastName: 'System',
-      department: 'IT',
-      role: 'Administrateur',
-      hireDate: new Date('2017-06-01'),
-      isActive: true
-    }
-  ];
+  try {
+    // Nettoyer la base (ordre important pour les relations)
+    await prisma.feedback.deleteMany();
+    await prisma.message.deleteMany();
+    await prisma.conversation.deleteMany();
+    await prisma.user.deleteMany();
 
-  for (const userData of users) {
-    const user = await prisma.user.upsert({
-      where: { email: userData.email },
-      update: userData,
-      create: userData
-    });
-
-    console.log(`✅ Utilisateur créé: ${user.email}`);
-
-    // Créer le solde de congés pour chaque utilisateur
-    const currentYear = new Date().getFullYear();
-    await prisma.leaveBalance.upsert({
-      where: { userId: user.id },
-      update: {
-        paidLeave: 25,
-        rtt: 12,
-        sickLeave: 0,
-        year: currentYear,
-        lastUpdate: new Date()
-      },
-      create: {
-        userId: user.id,
-        paidLeave: 25,
-        rtt: 12,
-        sickLeave: 0,
-        year: currentYear
+    // Créer les utilisateurs de démo
+    const marie = await prisma.user.create({
+      data: {
+        email: 'marie.dupont@entreprise.fr',
+        password: await bcrypt.hash('demo123', 10),
+        name: 'Marie Dupont',
+        firstName: 'Marie',
+        lastName: 'Dupont',
+        department: 'Marketing',
+        role: 'employee',
+        antibiaId: 'emp-001',
+        manager: 'Pierre Martin',
+        hireDate: new Date('2021-03-15'),
+        isActive: true
       }
     });
 
-    // Créer quelques demandes de congés d'exemple
-    const leaveRequests = [
-      {
-        userId: user.id,
-        type: 'PAID',
-        startDate: new Date('2024-12-23'),
-        endDate: new Date('2024-12-27'),
-        days: 5,
-        reason: 'Vacances de Noël',
-        status: 'APPROVED',
-        approvedBy: 'system',
-        approvedAt: new Date()
-      },
-      {
-        userId: user.id,
-        type: 'RTT',
-        startDate: new Date('2024-11-15'),
-        endDate: new Date('2024-11-15'),
-        days: 1,
-        reason: 'RTT',
-        status: 'APPROVED',
-        approvedBy: 'system',
-        approvedAt: new Date()
+    const paul = await prisma.user.create({
+      data: {
+        email: 'paul.martin@entreprise.fr',
+        password: await bcrypt.hash('demo123', 10),
+        name: 'Paul Martin',
+        firstName: 'Paul',
+        lastName: 'Martin',
+        department: 'Informatique',
+        role: 'employee',
+        antibiaId: 'emp-002',
+        manager: 'Sophie Bernard',
+        hireDate: new Date('2019-09-01'),
+        isActive: true
       }
-    ];
-
-    for (const requestData of leaveRequests) {
-      await prisma.leaveRequest.upsert({
-        where: {
-          userId_startDate_endDate: {
-            userId: requestData.userId,
-            startDate: requestData.startDate,
-            endDate: requestData.endDate
-          }
-        },
-        update: requestData,
-        create: requestData
-      });
-    }
-  }
-
-  // Créer des formations d'exemple
-  const trainings = [
-    {
-      title: 'React Avancé - Hooks et Performance',
-      description: 'Maîtrisez les hooks avancés de React et optimisez les performances.',
-      category: 'Développement',
-      duration: '2 jours',
-      difficulty: 'ADVANCED',
-      maxSpots: 12,
-      availableSpots: 8,
-      instructor: 'Sarah Chen',
-      location: 'Salle A',
-      isOnline: false,
-      price: 890,
-      tags: ['React', 'JavaScript', 'Performance'],
-      requirements: ['React de base', 'JavaScript ES6+'],
-      objectives: ['Hooks personnalisés', 'Optimisation', 'State management'],
-      startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      endDate: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000),
-      isActive: true
-    },
-    {
-      title: 'Leadership et Management',
-      description: 'Développez vos compétences de leadership.',
-      category: 'Management',
-      duration: '3 jours',
-      difficulty: 'INTERMEDIATE',
-      maxSpots: 15,
-      availableSpots: 3,
-      instructor: 'Marc Dubois',
-      location: 'Centre externe',
-      isOnline: false,
-      price: 1200,
-      tags: ['Leadership', 'Management', 'Communication'],
-      requirements: ['Expérience management'],
-      objectives: ['Style de leadership', 'Motivation équipe', 'Gestion conflits'],
-      startDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-      endDate: new Date(Date.now() + 16 * 24 * 60 * 60 * 1000),
-      isActive: true
-    },
-    {
-      title: 'Communication Efficace',
-      description: 'Améliorez vos compétences de communication.',
-      category: 'Communication',
-      duration: '1 jour',
-      difficulty: 'BEGINNER',
-      maxSpots: 20,
-      availableSpots: 15,
-      instructor: 'Julie Martin',
-      location: 'Salle B',
-      isOnline: false,
-      price: 350,
-      tags: ['Communication', 'Présentation'],
-      requirements: ['Aucun'],
-      objectives: ['Structurer présentations', 'Gérer stress', 'Adapter communication'],
-      startDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
-      endDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
-      isActive: true
-    }
-  ];
-
-  for (const trainingData of trainings) {
-    await prisma.training.upsert({
-      where: { title: trainingData.title },
-      update: trainingData,
-      create: trainingData
     });
-    console.log(`✅ Formation créée: ${trainingData.title}`);
+
+    const admin = await prisma.user.create({
+      data: {
+        email: 'admin@entreprise.fr',
+        password: await bcrypt.hash('admin123', 10),
+        name: 'Admin RH',
+        firstName: 'Admin',
+        lastName: 'RH',
+        department: 'Ressources Humaines',
+        role: 'admin',
+        antibiaId: 'admin-001',
+        isActive: true
+      }
+    });
+
+    console.log('✅ Created 3 users');
+
+    // Créer une conversation simple pour Marie
+    const conversation = await prisma.conversation.create({
+      data: {
+        userId: marie.id,
+        title: 'Demande de congés été 2025',
+        status: 'ACTIVE',
+        metadata: {
+          lastIntent: 'leave_request'
+        }
+      }
+    });
+
+    // Créer des messages pour la conversation
+    const message1 = await prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        userId: marie.id,
+        type: 'USER',
+        content: 'Bonjour, je voudrais poser des congés pour cet été',
+        intent: 'leave_request',
+        confidence: 0.95
+      }
+    });
+
+    const message2 = await prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        type: 'BOT',
+        content: 'Bonjour Marie ! Je serais ravi de vous aider avec votre demande de congés. Pour quelles dates souhaitez-vous poser vos congés ?',
+        intent: 'leave_request'
+      }
+    });
+
+    console.log('✅ Created 1 conversation with 2 messages');
+
+    console.log('\n🎉 Seed completed successfully!');
+    console.log('\n📝 Test accounts:');
+    console.log('- marie.dupont@entreprise.fr / demo123');
+    console.log('- paul.martin@entreprise.fr / demo123');
+    console.log('- admin@entreprise.fr / admin123');
+    
+  } catch (error) {
+    console.error('❌ Seed error:', error);
+    throw error;
   }
-
-  // Créer des statistiques initiales
-  await prisma.dailyStats.upsert({
-    where: { date: new Date() },
-    update: {
-      totalUsers: users.length,
-      activeUsers: users.length,
-      totalMessages: 0,
-      botMessages: 0
-    },
-    create: {
-      date: new Date(),
-      totalUsers: users.length,
-      activeUsers: users.length,
-      totalMessages: 0,
-      botMessages: 0
-    }
-  });
-
-  console.log('✅ Seeding terminé avec succès !');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Erreur lors du seeding:', e);
+    console.error('❌ Seed error:', e);
     process.exit(1);
   })
   .finally(async () => {
