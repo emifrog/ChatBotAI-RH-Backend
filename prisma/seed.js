@@ -62,7 +62,24 @@ async function main() {
       }
     });
 
-    console.log('✅ Created 3 users');
+    // Créer l'utilisateur démo pour les tests
+    const demo = await prisma.user.create({
+      data: {
+        email: 'demo@company.com',
+        password: await bcrypt.hash('demo', 10),
+        name: 'Utilisateur Démo',
+        firstName: 'Utilisateur',
+        lastName: 'Démo',
+        department: 'Démonstration',
+        role: 'employee',
+        antibiaId: 'demo-001',
+        manager: 'Manager Démo',
+        hireDate: new Date('2024-01-01'),
+        isActive: true
+      }
+    });
+
+    console.log('✅ Created 4 users (including demo user)');
 
     // Créer une conversation simple pour Marie
     const conversation = await prisma.conversation.create({
