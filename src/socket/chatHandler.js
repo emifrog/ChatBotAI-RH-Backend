@@ -317,6 +317,40 @@ Que souhaitez-vous faire ?`;
     }
   }
 
+  // Générer réponse pour les demandes de congés
+  async generateLeaveRequestResponse(userId) {
+    try {
+      const balance = await leaveService.getLeaveBalance(userId);
+      const pendingRequests = await leaveService.getUserLeaveRequests(userId, 5, 'PENDING');
+
+      const content = `📝 **Demande de congés :**
+• **Congés disponibles :** ${balance.paidLeave} jours
+• **RTT disponibles :** ${balance.rtt} jours
+
+${pendingRequests.length > 0 ? `**Demandes en attente :**
+${pendingRequests.map(req => `• ${req.days}j ${req.type.toLowerCase()} - ${req.startDate} au ${req.endDate}`).join('\n')}\n\n` : ''}Que souhaitez-vous faire ?`;
+
+      return {
+        content,
+        actions: [
+          { id: '1', label: 'Nouvelle demande', action: 'create_leave_request' },
+          { id: '2', label: 'Mes demandes', action: 'view_my_requests' },
+          { id: '3', label: 'Voir le solde', action: 'view_leave_balance' }
+        ],
+        metadata: { balance, pendingRequests }
+      };
+    } catch (error) {
+      logger.error('Erreur generateLeaveRequestResponse:', error);
+      return {
+        content: "Désolé, je n'arrive pas à récupérer vos informations de demandes de congés en ce moment.",
+        actions: [
+          { id: '1', label: 'Réessayer', action: 'leave_request' },
+          { id: '2', label: 'Contacter RH', action: 'contact_hr' }
+        ]
+      };
+    }
+  }
+
   // Générer réponse pour la paie
   async generatePayrollResponse(userId) {
     try {
